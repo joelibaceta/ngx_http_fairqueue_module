@@ -1,0 +1,3 @@
+policy,ventana,admitidos,bots,bot_share
+A) cursor desde t=0 (sin registro),0-62s,490,172,0.351
+B) cursor desde t=125s (tras registro),125-188s,476,93,0.195

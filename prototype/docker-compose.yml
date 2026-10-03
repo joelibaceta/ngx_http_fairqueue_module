@@ -1,0 +1,42 @@
+services:
+  edge:
+    image: openresty/openresty:alpine
+    ports:
+      - "${FQ_HOST_PORT:-8080}:8080"
+    volumes:
+      - ./openresty/nginx.conf:/usr/local/openresty/nginx/conf/nginx.conf:ro
+      - ./openresty/lua:/etc/nginx/lua:ro
+      - ./openresty/html:/etc/nginx/html:ro
+    environment:
+      FQ_SECRET: "demo-secret-no-usar-en-prod"
+      FQ_EVENT_ID: "demo-event-2026"
+      # Admisiones por segundo (cursor). Tunable para la demo.
+      FQ_RATE_PER_SEC: "${FQ_RATE_PER_SEC:-1}"
+      FQ_PENALTY_FRACTION: "0.02"
+      FQ_ALLOCATION: "${FQ_ALLOCATION:-hash}"
+      FQ_WINDOW_HEADROOM: "${FQ_WINDOW_HEADROOM:-0.2}"
+      FQ_AGING_CAP_FRACTION: "${FQ_AGING_CAP_FRACTION:-0.5}"
+      FQ_MAX_DEVICES_PER_IP: "${FQ_MAX_DEVICES_PER_IP:-64}"
+      # trust_xff SOLO detrás de un proxy de confianza que reescriba XFF. En edge
+      # expuesto debe ir en 0 (si no, el cliente forja su IP). Default seguro: 0.
+      # Para el simulador (emular IPs vía X-Forwarded-For) se pasa FQ_TRUST_XFF=1
+      # explícito en la línea de `docker compose up`.
+      FQ_TRUST_XFF: "${FQ_TRUST_XFF:-0}"
+      FQ_COOKIE_SECURE: "${FQ_COOKIE_SECURE:-0}"
+      # Detección enchufable: header de riesgo 0..1 de un upstream de confianza.
+      FQ_RISK_HEADER: "${FQ_RISK_HEADER:-}"
+      FQ_RISK_WEIGHT: "${FQ_RISK_WEIGHT:-0.5}"
+      FQ_ALLOW_DEFAULT_SECRET: "1"
+      # Apertura de registro (epoch). Vacío => registro abierto desde siempre.
+      FQ_WAITING_START: "${FQ_WAITING_START:-}"
+      FQ_AGING_PER_SEC: "0.5"
+      FQ_TOKEN_TTL: "300"
+      # Vacío => arranca al levantar el contenedor; si se setea, usa ese epoch.
+      FQ_START_EPOCH: "${FQ_START_EPOCH:-}"
+    depends_on:
+      - backend
+
+  backend:
+    image: openresty/openresty:alpine
+    volumes:
+      - ./backend/nginx.conf:/usr/local/openresty/nginx/conf/nginx.conf:ro

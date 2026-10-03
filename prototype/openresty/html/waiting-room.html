@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sala de espera — FairQueue</title>
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      margin: 0; min-height: 100vh; display: grid; place-items: center;
+      font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+      background: radial-gradient(1200px 600px at 50% -10%, #1e293b, #0b1120);
+      color: #e2e8f0;
+    }
+    .card {
+      width: min(92vw, 460px); padding: 2.5rem; text-align: center;
+      background: rgba(30,41,59,.6); border: 1px solid rgba(148,163,184,.15);
+      border-radius: 20px; backdrop-filter: blur(8px);
+    }
+    h1 { font-size: 1.25rem; font-weight: 600; margin: 0 0 1.5rem; color: #f8fafc; }
+    .pos { font-size: 3.5rem; font-weight: 800; line-height: 1;
+           background: linear-gradient(135deg,#60a5fa,#a78bfa);
+           -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .label { font-size: .8rem; text-transform: uppercase; letter-spacing: .08em; color: #94a3b8; margin-top: .5rem; }
+    .meta { margin-top: 1.75rem; display: flex; justify-content: space-around; font-size: .9rem; }
+    .meta b { display: block; font-size: 1.25rem; color: #f1f5f9; }
+    .bar { height: 6px; margin-top: 1.75rem; border-radius: 99px; background: rgba(148,163,184,.15); overflow: hidden; }
+    .bar > span { display: block; height: 100%; width: 0; background: linear-gradient(90deg,#60a5fa,#a78bfa); transition: width .6s; }
+    .hint { margin-top: 1.5rem; font-size: .75rem; color: #64748b; }
+    .pulse { animation: pulse 1.6s ease-in-out infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.55} }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1 id="headline" class="pulse">Estás en la cola…</h1>
+    <div class="pos" id="position">—</div>
+    <div class="label">tu posición</div>
+    <div class="meta">
+      <div>personas<br /><b id="total">—</b></div>
+      <div>espera aprox.<br /><b id="eta">—</b></div>
+    </div>
+    <div class="bar"><span id="bar"></span></div>
+    <p class="hint">No cierres esta página. Tu lugar se mantiene automáticamente.</p>
+  </div>
+
+  <!--
+    MODELO DE CONFIANZA — leer antes de tocar esto:
+
+    Este JavaScript NO concede acceso. Es solo UX. La admisión se decide
+    exclusivamente en el servidor (access_by_lua -> fairqueue.gate), que emite
+    un token firmado HMAC solo cuando posición <= cursor. Si alguien edita este
+    JS para redirigir antes de tiempo, /checkout lo reevalúa en servidor y lo
+    devuelve aquí: sin token válido no se pasa. Falsear la respuesta JSON del
+    cliente tampoco sirve porque el token no se puede forjar sin el secreto.
+  -->
+  <script>
+    const fmt = (s) => {
+      if (s <= 0) return "ya casi";
+      if (s < 60) return s + "s";
+      const m = Math.floor(s / 60);
+      return m + " min" + (m < 10 ? " " + (s % 60) + "s" : "");
+    };
+    const $ = (id) => document.getElementById(id);
+    let startTotal = null;
+
+    async function poll() {
+      try {
+        const r = await fetch("/__fairqueue/status", { cache: "no-store" });
+        const d = await r.json();
+
+        if (d.state === "admitted") {
+          $("headline").textContent = "¡Es tu turno! Entrando…";
+          // UX únicamente: la autoridad real es /checkout, que valida el token
+          // firmado del lado servidor antes de dejar pasar.
+          window.location = d.redirect || "/checkout";
+          return;
+        }
+
+        if (d.state === "closed") {
+          // Registro aún no abre: cuenta regresiva, no estás encolado todavía.
+          $("headline").textContent = "El registro abre en " + fmt(d.opens_in);
+          $("position").textContent = "—";
+          setTimeout(poll, 1000);
+          return;
+        }
+
+        if (d.state === "rate_limited") {
+          // Demasiados registros desde esta red/IP.
+          $("headline").textContent = "Demasiados intentos desde tu red";
+          $("position").textContent = "⚠";
+          setTimeout(poll, 3000);
+          return;
+        }
+
+        if (d.phase === "registration") {
+          // En registro NO se revela la posición (anti-minado); solo cuenta regresiva.
+          $("headline").textContent = "Estás en la cola · la venta abre en " + fmt(d.sale_in);
+          $("position").textContent = "✓";
+          $("total").textContent = (d.total || 0).toLocaleString();
+          $("eta").textContent = "—";
+          $("bar").style.width = "0%";
+        } else {
+          // Fase de venta: ya se muestra posición/ETA.
+          $("headline").textContent = "Avanzando en la cola…";
+          $("position").textContent = d.position.toLocaleString();
+          $("total").textContent = d.total.toLocaleString();
+          $("eta").textContent = fmt(d.eta_seconds);
+          if (startTotal === null) startTotal = Math.max(d.position, 1);
+          const pct = Math.max(0, Math.min(100, (1 - d.position / startTotal) * 100));
+          $("bar").style.width = pct + "%";
+        }
+      } catch (e) { /* reintenta en el próximo tick */ }
+      setTimeout(poll, 2000);
+    }
+    poll();
+  </script>
+</body>
+</html>
