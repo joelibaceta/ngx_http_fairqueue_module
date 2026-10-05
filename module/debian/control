@@ -1,0 +1,25 @@
+Source: nginx-module-fairqueue
+Section: httpd
+Priority: optional
+Maintainer: Joel Ibaceta <mail@joelibaceta.com>
+Build-Depends: debhelper-compat (= 13),
+               libpcre3-dev,
+               libpcre2-dev,
+               zlib1g-dev,
+               libssl-dev,
+               nginx,
+               wget,
+               ca-certificates
+Standards-Version: 4.6.2
+Homepage: https://github.com/joelibaceta/ngx_http_fairqueue_module
+
+Package: nginx-module-fairqueue
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, nginx
+Description: FairQueue - sala de espera justa / control de admisión para nginx
+ Módulo dinámico de nginx que implementa una waiting room con reparto por hash
+ en ventanas incrementales: elimina la ventaja de velocidad y de predicción,
+ acota la carga del backend a una tasa configurable, y expone señales de abuso
+ (cap por IP, riesgo) enchufables. No requiere tocar el backend.
+ .
+ El .so se compila contra la versión de nginx del sistema (--with-compat).

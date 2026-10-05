@@ -1,0 +1,32 @@
+#!/usr/bin/make -f
+# Construye SOLO el módulo (.so) contra el fuente de la versión de nginx del
+# sistema, con --with-compat. En Launchpad (sin internet) hay que VENDORIZAR el
+# tarball nginx-$(NGINX_VER).tar.gz en el árbol fuente; si está presente, no se
+# descarga. Fuera de Launchpad se baja de nginx.org.
+
+NGINX_VER := $(shell dpkg-query -W -f='$${Version}' nginx 2>/dev/null | sed 's/[-~].*//;s/^[0-9]*://')
+ifeq ($(NGINX_VER),)
+NGINX_VER := 1.26.0
+endif
+NGSRC := nginx-$(NGINX_VER)
+
+%:
+	dh $@
+
+override_dh_auto_configure:
+	[ -d $(NGSRC) ] || { \
+	  [ -f $(NGSRC).tar.gz ] || wget -q https://nginx.org/download/$(NGSRC).tar.gz ; \
+	  tar xzf $(NGSRC).tar.gz ; }
+	cd $(NGSRC) && ./configure --with-compat --add-dynamic-module=$(CURDIR)
+
+override_dh_auto_build:
+	cd $(NGSRC) && $(MAKE) modules
+
+override_dh_auto_install:
+	install -D -m0644 $(NGSRC)/objs/ngx_http_fairqueue_module.so \
+	  debian/nginx-module-fairqueue/usr/lib/nginx/modules/ngx_http_fairqueue_module.so
+	install -D -m0644 debian/modules-enabled.conf \
+	  debian/nginx-module-fairqueue/etc/nginx/modules-enabled/50-mod-http-fairqueue.conf
+
+override_dh_auto_clean:
+	rm -rf $(NGSRC)
