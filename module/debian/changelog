@@ -1,0 +1,5 @@
+nginx-module-fairqueue (0.1.0) noble; urgency=medium
+
+  * Release inicial: módulo FairQueue (waiting room justo / control de admisión).
+
+ -- Joel Ibaceta <mail@joelibaceta.com>  Sat, 03 Oct 2026 12:00:00 -0500

@@ -1,0 +1,42 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  # Core gate: the design's principles as black-box invariants. A contribution
+  # that breaks any of them fails here. Runs in Alpine (matches ci/invariants.sh).
+  invariants:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: FairQueue invariants
+        run: |
+          docker run --rm -v "$PWD/module":/module alpine:3.20 \
+            sh /module/ci/invariants.sh
+
+  # Keep the Debian/PPA source package building against the distro nginx.
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq nginx dpkg-dev debhelper build-essential \
+            libpcre3-dev libpcre2-dev zlib1g-dev libssl-dev wget ca-certificates
+      - name: Build .deb
+        run: |
+          cd module
+          chmod +x debian/rules
+          dpkg-buildpackage -b -us -uc
+          ls -l ../nginx-module-fairqueue_*.deb
+      - name: Install the package and load the module
+        run: |
+          sudo apt-get install -y ./nginx-module-fairqueue_*.deb
+          nginx -t
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nginx-module-fairqueue-deb
+          path: nginx-module-fairqueue_*.deb

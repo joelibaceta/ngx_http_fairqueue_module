@@ -1,0 +1,11 @@
+# Not part of the shipped module (kept locally only)
+prototype
+fairqueue_concept.md
+
+# Build artifacts
+dist/
+objs/
+*.so
+nginx-*.tar.gz
+*.deb
+*.o

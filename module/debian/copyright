@@ -1,0 +1,7 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: fairqueue
+Source: https://github.com/joelibaceta/ngx_http_fairqueue_module
+
+Files: *
+Copyright: 2026 Joel Ibaceta
+License: MIT
