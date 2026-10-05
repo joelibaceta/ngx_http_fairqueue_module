@@ -95,10 +95,11 @@ nginx -t
 
 Releases: https://github.com/joelibaceta/ngx_http_fairqueue_module/releases
 
-### Or via apt (Launchpad PPA)
+### apt (Launchpad PPA) — coming soon
 
 ```sh
 sudo add-apt-repository ppa:joelibaceta/fairqueue
+sudo apt update
 sudo apt install nginx-module-fairqueue
 ```
 
